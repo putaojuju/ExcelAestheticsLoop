@@ -1,0 +1,33 @@
+# .gitignore for Excel MCP Server
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# MCP Caches & Logs
+audit_cache/
+*.log
+mcp_ipc_*.json
+mcp_layout_ipc_*.json
+
+# Data Security (CRITICAL: DO NOT REMOVE)
+# 排除所有 Excel 数据文件，防止结算敏感信息泄露
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+*.bak
+~$*
+
+# Project Archives
+archive/
+scratch/
+.agent/
+.gemini/
+
+# IDE
+.vscode/
+.idea/
