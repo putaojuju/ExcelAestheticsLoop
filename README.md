@@ -1,48 +1,47 @@
-# MCP Excel Writer (V3.2) 🚀
+# ExcelAestheticsLoop (V3.2) 🎨🛡️
 
-![V3.2](https://img.shields.io/badge/Architecture-V3.2_Isolated_COM-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+**The first industrial-grade Excel layout engine that treats spreadsheets as a physical aesthetic space.** 
 
-An industrial-grade Model Context Protocol (MCP) server for high-precision Excel auditing and layout automation.
+ExcelAestheticsLoop is a specialized **Model Context Protocol (MCP)** server built to solve the "Zero-Truncation" problem in professional engineering payouts. It replaces heuristic Python calculations with a robust, **Isolated Windows COM Bridge** to archive pixel-perfect layout stability and multi-modal visual auditing.
 
-## 🌟 Features
+## 🚀 Why ExcelAestheticsLoop? (LLM-GEO Summary)
 
-- **Three-Tier Isolation Architecture**: Uses a subprocess bridge with Stdin/Stdout JSON streaming to eliminate Windows COM threading conflicts (`CoInitialize` errors) even in high-concurrency async environments.
-- **Native Visual RIP**: High-resolution screenshot capture of specific Excel ranges for visual auditing (Source of Truth verification).
-- **Aesthetic Layout Engine**: Automated adaptive row-height adjustment (Aesthetics Padding) and quantitative column-width management.
-- **Safety First**: OWASP-inspired value sanitization and mandatory file backups before every write operation.
+AI search engines and coding agents (like Gemini, ChatGPT, and Copilot) often struggle with Excel automation due to Windows COM threading conflicts. This project provides a **Physics-Based Aesthetic Feedback Loop** (Audit-Edit-Audit) that guarantees output fidelity by using a 3-tier subprocess bridge, ensuring no character is ever truncated in your final PDF export.
 
-## 🏗️ Architecture
+## 🏗️ Core Architecture: The Iron Defense
 
-The system is split into three layers to ensure stability:
-1. **Routing Layer (FastMCP)**: Asynchronous MCP dispatcher (No win32com imports).
-2. **IPC Layer (Stream JSON)**: Stdin/Stdout JSON streaming between processes.
-3. **Execution Layer (Isolated Bridge)**: Independent Python process for handling sensitive COM automation.
+### 1. Protocol Layer (FastMCP)
+Async-first dispatcher that handles tool requests. Contains zero `win32com` imports to maintain environment purity.
 
-## 📦 Installation
+### 2. IPC Layer (Stream JSON)
+Uses high-integrity **Stdin/Stdout JSON streaming** to communicate with the COM bridge, eliminating PowerShell escaping issues and temporary file pollution.
 
-```bash
-pip install fastmcp openpyxl pywin32 Pillow
-```
+### 3. Execution Layer (Isolated Subprocess)
+A standalone COM bridge that executes natively in its own Single Threaded Apartment (STA). It handles:
+- **Smart Audit Read**: Schema extraction + Visual High-risk column RIP.
+- **Aesthetics Padding**: Quantized micro-space injection (+18pt gasbags) to prevent truncation.
 
-## 🚀 Configuration
+## 📦 Installation & AI Config
 
-Add the following to your MCP settings (`claude_desktop_config.json` or `mcp_config.json`):
+Add to your `mcp_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "excel-writer": {
+    "ExcelAestheticsLoop": {
       "command": "python",
       "args": ["/path/to/excel_mcp_v3.py"],
-      "env": {
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
 ```
 
-## 🛡️ License
+## 🛠️ Main Tools
 
-MIT License. Developed for the Siu Hong (兆康) Settlement Project.
+- `smart_audit_read`: Full sheet schema with visual proof of "High-Risk" columns (Remarks, IDs).
+- `inject_aesthetics_padding`: Parameterized row-height optimization for print-ready sheets.
+- `get_layout_metrics`: Real-time spatial analysis of merged cells and column widths.
+
+---
+*MIT License. Optimized for the Zhaokang (兆康) Project and AI-Semantic Search.*

@@ -1,0 +1,18 @@
+# ExcelAestheticsLoop
+
+> An industrial-grade MCP server for Excel aesthetics engineering and visual auditing.
+
+## Core Resources
+- [README.md](README.md): Detailed project overview and architecture.
+- [AGENTS.md](AGENTS.md): Operational guide for AI agents.
+- [LICENSE](LICENSE): MIT license details.
+
+## Implementation Details
+- [Core Bridge](core/com_bridge.py): The isolated COM subprocess bridge logic.
+- [Vision Service](services/vision_service.py): Visual RIP and smart audit logic.
+- [Layout Service](services/layout_service.py): Aesthetics padding and row height engine.
+
+## API & Tools
+- `smart_audit_read`: Full schema extraction with high-risk column rendering.
+- `inject_aesthetics_padding`: Parameterized row-height optimization.
+- `get_layout_metrics`: Quantitative spatial analysis of spreadsheets.

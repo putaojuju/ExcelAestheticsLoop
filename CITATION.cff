@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Lin"
+  given-names: "Putao"
+title: "ExcelAestheticsLoop (V3.2)"
+version: 3.2.0
+doi: 10.5281/zenodo.mcp-excel-aesthetics
+date-released: 2026-04-10
+url: "https://github.com/putaojuju/ExcelAestheticsLoop"
+abstract: "An industrial-grade MCP server for automated Excel layout auditing and aesthetics engineering using isolated COM subprocess bridges."
+keywords:
+  - mcp
+  - excel-automation
+  - aesthetics
+  - computer-vision
+  - windows-com
+license: MIT
