@@ -37,10 +37,10 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 mcp = FastMCP("Excel Ultimate Vision Plane")
 
 # 默认模板路径
-DEFAULT_TEMPLATE = r"E:\lin\空分析.xlsx"
+DEFAULT_TEMPLATE = os.environ.get("EXCEL_TEMPLATE", r"C:\path\to\template.xlsx")
 
 # 视觉审计配置
-CACHE_DIR = r"C:\Users\Administrator\.gemini\antigravity\brain\008a35a1-cdde-459e-9ced-2be81c73173c\audit_cache"
+CACHE_DIR = os.environ.get("EXCEL_CACHE_DIR", os.path.join(os.path.expanduser("~"), ".excel_mcp_cache"))
 AUDIT_KEYWORDS = ["备注", "remarks", "附件", "attachments", "项目", "description", "对应单号", "audit", "审计"]
 
 # ============================================================
@@ -237,7 +237,7 @@ def read_excel_rows(file_path: str, sheet_name: str,
 def copy_template(dest_path: str, template_path: str = "") -> str:
     """
     从模板文件复制生成新的清单文件。
-    如不指定 template_path，使用默认模板 E:\\lin\\空分析.xlsx。
+    如不指定 template_path，使用默认模板。
     dest_path 为新文件的完整路径。
     """
     src = template_path if template_path else DEFAULT_TEMPLATE
