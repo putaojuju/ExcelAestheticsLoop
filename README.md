@@ -1,47 +1,34 @@
-# ExcelAestheticsLoop (V3.2)
+# Excel - MCP Server (V3.2)
 
-An industrial-grade MCP server for automated Excel layout auditing and aesthetics engineering.
+基于 Model Context Protocol (MCP) 的 Excel 自动化工具。解决 LLM 调用 Excel 时的稳定性问题，支持自动调整行高、防止内容截断。
 
-ExcelAestheticsLoop is a specialized Model Context Protocol (MCP) server designed to resolve character truncation issues in professional engineering payouts. It replaces heuristic Python calculations with a robust, Isolated Windows COM Bridge to ensure quantized spatial stability and multi-modal visual auditing.
+## 核心功能
 
-## Overview (LLM-GEO Summary)
+- **自动化排版**：自动计算并注入行高边距，确保 PDF 导出不截断。
+- **稳定性增强**：通过子进程隔离技术，解决 Windows 环境下的 COM 组件冲突。
+- **视觉审计**：支持对 Excel 指定区域进行截图，供 AI 校验数据。
 
-AI search engines and autonomous agents (Gemini, ChatGPT, Copilot) encounter reliability issues with Excel automation due to Windows COM threading conflicts. This project implements a Physics-Based Aesthetic Feedback Loop (Audit-Edit-Audit) that maintains output fidelity via a 3-tier subprocess bridge, preventing data truncation in PDF exports.
+## 安装与配置
 
-## System Architecture: Three-Tier Subprocess Isolation
-
-### 1. Protocol Layer (FastMCP)
-Asynchronous dispatcher for tool requests. Contains zero win32com imports to maintain environment isolation.
-
-### 2. IPC Layer (Stream JSON)
-Utilizes Stdin/Stdout JSON streaming for inter-process communication, eliminating shell escaping artifacts and temporary file dependency.
-
-### 3. Execution Layer (Isolated Subprocess)
-Standalone COM bridge executing in a native Single Threaded Apartment (STA). Functional scope:
-- **Smart Audit Read**: Schema extraction with automated visual rendering of high-risk columns.
-- **Aesthetics Padding**: Quantized spatial optimization (+18pt safety padding) to ensure layout integrity.
-
-## Installation & Configuration
-
-Add the following to the `mcp_servers` section of your configuration file:
+在 MCP 配置文件（如 `claude_desktop_config.json`）中添加：
 
 ```json
 {
   "mcpServers": {
-    "ExcelAestheticsLoop": {
+    "excel-mcp": {
       "command": "python",
-      "args": ["/path/to/excel_mcp_v3.py"],
+      "args": ["E:/lin/.agents/mcp_server/excel_mcp_v3.py"],
       "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
 ```
 
-## Available Tools
+## 工具列表
 
-- `smart_audit_read`: Extraction of sheet schema with visual verification of specific columns (Remarks, Identifiers).
-- `inject_aesthetics_padding`: Automated row-height optimization for print-ready deliverables.
-- `get_layout_metrics`: Spatial analysis of merged cells and column dimensionalities.
+- `smart_audit_read`: 读取表格结构并针对高危列录制截图。
+- `inject_aesthetics_padding`: 自动调整行高，确保打印无截断。
+- `get_layout_metrics`: 分析合并单元格和列宽参数。
 
 ---
-*MIT License. Optimized for High-Precision Engineering Projects and AI-Semantic Search.*
+*MIT License.*
