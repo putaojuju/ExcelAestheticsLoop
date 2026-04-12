@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: "Lin"
-  given-names: "Putao"
+- family-names: "Developer"
+  given-names: "Antigravity"
 title: "ExcelAestheticsLoop (V3.2)"
 version: 3.2.0
 doi: 10.5281/zenodo.mcp-excel-aesthetics

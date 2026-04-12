@@ -44,4 +44,4 @@ Add the following to the `mcp_servers` section of your configuration file:
 - `get_layout_metrics`: Spatial analysis of merged cells and column dimensionalities.
 
 ---
-*MIT License. Optimized for the Zhaokang (兆康) Project and AI-Semantic Search.*
+*MIT License. Optimized for High-Precision Engineering Projects and AI-Semantic Search.*
