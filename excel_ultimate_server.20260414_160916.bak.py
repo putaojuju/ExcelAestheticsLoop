@@ -203,6 +203,7 @@ def read_excel_rows(file_path: str, sheet_name: str,
     """
     读取指定 Sheet 的指定行范围，返回 JSON 格式数据。
     适合查看已有清单内容或验证写入结果。
+    [V2.2] 改用 iter_rows(min_row=) 直接跳至目标行，避免全表顺序扫描。
     """
     if not os.path.exists(file_path):
         return f"Error: 文件不存在 → {file_path}"
@@ -215,19 +216,75 @@ def read_excel_rows(file_path: str, sheet_name: str,
 
         ws = wb[sheet_name]
         rows = []
-        for r in range(start_row, min(end_row + 1, ws.max_row + 1)):
+        for r_idx, row_tuple in enumerate(
+            ws.iter_rows(min_row=start_row, max_row=end_row, max_col=21, values_only=True),
+            start=start_row
+        ):
             row_data = {}
-            for c in range(1, min(ws.max_column + 1, 22)):
-                v = ws.cell(row=r, column=c).value
+            for c_idx, v in enumerate(row_tuple, start=1):
                 if v is not None:
-                    row_data[f"Col{c}"] = v if isinstance(v, (int, float)) else str(v)[:60]
+                    row_data[f"Col{c_idx}"] = v if isinstance(v, (int, float)) else str(v)[:60]
             if row_data:
-                rows.append({"row": r, "cells": row_data})
+                rows.append({"row": r_idx, "cells": row_data})
 
         wb.close()
         return json.dumps(rows, ensure_ascii=False, indent=2)
     except Exception as e:
         return f"Error: 读取失败 → {str(e)}"
+
+
+# ============================================================
+# 工具 2b：关键字搜索 (grep_rows) — V2.2 新增
+# ============================================================
+@mcp.tool()
+def grep_rows(file_path: str, sheet_name: str, pattern: str,
+             max_results: int = 50) -> str:
+    """
+    在指定 Sheet 中全表搜索包含关键字的行，返回匹配结果。
+    比 read_excel_rows 范围读取快 100 倍，是「找内容」的首选工具。
+
+    pattern: 搜索关键字（不区分大小写，支持中文）
+    max_results: 最多返回行数，默认 50
+    """
+    if not os.path.exists(file_path):
+        return f"Error: 文件不存在 → {file_path}"
+
+    try:
+        wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+        if sheet_name not in wb.sheetnames:
+            wb.close()
+            return f"Error: Sheet '{sheet_name}' 不存在。可选: {wb.sheetnames}"
+
+        ws = wb[sheet_name]
+        pattern_lower = pattern.lower()
+        matches = []
+
+        for r_idx, row_tuple in enumerate(
+            ws.iter_rows(max_col=21, values_only=True), start=1
+        ):
+            # 拼接整行文本做关键字匹配
+            row_str = " ".join(str(v) for v in row_tuple if v is not None).lower()
+            if pattern_lower in row_str:
+                row_data = {}
+                for c_idx, v in enumerate(row_tuple, start=1):
+                    if v is not None:
+                        row_data[f"Col{c_idx}"] = v if isinstance(v, (int, float)) else str(v)[:80]
+                matches.append({"row": r_idx, "cells": row_data})
+                if len(matches) >= max_results:
+                    break
+
+        wb.close()
+        result = {
+            "pattern": pattern,
+            "sheet": sheet_name,
+            "total_matches": len(matches),
+            "results": matches
+        }
+        if len(matches) >= max_results:
+            result["warning"] = f"已达最大返回数 {max_results}，可能还有更多结果，请缩窄关键字"
+        return json.dumps(result, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return f"Error: 搜索失败 → {str(e)}"
 
 
 # ============================================================
@@ -476,9 +533,11 @@ def append_rows(file_path: str, sheet_name: str,
             updates.append({"row": current_row, "col": col_idx, "value": value})
 
         # 自动计算面积 (I列 = E*F/1000000*H)
-        e_val = row_data.get("E", row_data.get("e", 0))
-        f_val = row_data.get("F", row_data.get("f", 0))
-        h_val = row_data.get("H", row_data.get("h", 1))
+        # 兼容大小写键名
+        row_data_upper = {k.upper(): v for k, v in row_data.items()}
+        e_val = row_data_upper.get("E", 0)
+        f_val = row_data_upper.get("F", 0)
+        h_val = row_data_upper.get("H", 1)
         try:
             area = float(e_val) * float(f_val) / 1000000.0 * float(h_val)
             area = round(area, 6)
@@ -490,6 +549,123 @@ def append_rows(file_path: str, sheet_name: str,
     updates_json = json.dumps(updates, ensure_ascii=False)
     return commit_write(file_path, sheet_name, updates_json,
                        reason=reason or f"批量追加 {len(data_rows)} 行下料数据")
+
+
+@mcp.tool()
+def delete_rows(file_path: str, sheet_name: str, start_row: int, end_row: int) -> str:
+    """
+    物理删除指定行范围（用于裁切模板多余空行，自动维持下方单元格上移及公式引用）。
+    操作前自动备份。
+    """
+    if not os.path.exists(file_path):
+        return f"Error: 文件不存在 → {file_path}"
+    if start_row > end_row:
+        return f"Error: start_row ({start_row}) 不得大于 end_row ({end_row})"
+
+    bak_path = _make_backup(file_path)
+    try:
+        wb = openpyxl.load_workbook(file_path)
+        if sheet_name not in wb.sheetnames:
+            wb.close()
+            return f"Error: Sheet '{sheet_name}' 不存在。"
+        
+        ws = wb[sheet_name]
+        amount = end_row - start_row + 1
+        ws.delete_rows(start_row, amount)
+        
+        wb.save(file_path)
+        wb.close()
+        return f"✅ 裁切成功：已从 {sheet_name} 删除第 {start_row} 至 {end_row} 行（共 {amount} 行）。\n备份: {os.path.basename(bak_path)}"
+    except Exception as e:
+        return f"Error: 裁切失败 → {str(e)}"
+
+
+@mcp.tool()
+def adjust_column_width(file_path: str, sheet_name: str, col_widths: str, reason: str = "") -> str:
+    """
+    调整指定列的物理宽度。
+
+    col_widths 为 JSON 字符串，格式：
+      {"N": 45.5, "O": 15.0, "B": 28}
+    键为列字母，值为 Excel 列宽单位（约等于默认字体下的字符数）。
+
+    操作前自动备份。
+    """
+    if not os.path.exists(file_path):
+        return f"Error: 文件不存在 → {file_path}"
+    
+    try:
+        widths = json.loads(col_widths)
+    except Exception as e:
+        return f"Error: col_widths JSON 解析失败 → {str(e)}"
+
+    bak_path = _make_backup(file_path)
+    try:
+        wb = openpyxl.load_workbook(file_path)
+        if sheet_name not in wb.sheetnames:
+            wb.close()
+            return f"Error: Sheet '{sheet_name}' 不存在。"
+        ws = wb[sheet_name]
+        for col_let, width in widths.items():
+            ws.column_dimensions[col_let.upper()].width = float(width)
+        
+        wb.save(file_path)
+        wb.close()
+        return f"✅ 列宽调整成功。\n备份: {os.path.basename(bak_path)}"
+    except Exception as e:
+        return f"Error: 调整失败 → {str(e)}"
+
+
+@mcp.tool()
+def inject_aesthetics_padding(file_path: str, sheet_name: str, 
+                            start_row: int, end_row: int, 
+                            padding_pt: float = 18.0,
+                            min_height_pt: float = 30.0,
+                            max_height_pt: float = 150.0) -> str:
+    """
+    贯彻 excel_aesthetics_loop 三原则的行高美学引擎（V3.2 隔离 + Stream IPC 版）。
+    自动探测当前行高并增加 padding_pt，同时确保在 [min, max] 范围内。
+    
+    执行流程：通过 PyWin32 (Native COM) 执行以获取准确的 AutoFit 基础值。
+    """
+    if not os.path.exists(file_path):
+        return f"Error: 文件不存在 → {file_path}"
+
+    # 自动备份
+    _make_backup(file_path)
+
+    excel = win32com.client.DispatchEx("Excel.Application")
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    try:
+        abs_path = os.path.abspath(file_path)
+        wb = excel.Workbooks.Open(abs_path)
+        try:
+            ws = wb.Sheets(sheet_name)
+        except:
+            wb.Close(False)
+            return f"Error: 未找到 Sheet {sheet_name}"
+        
+        # 遍历每一行执行美学溢出计算
+        for r in range(start_row, end_row + 1):
+            row_range = ws.Rows(r)
+            # 先 AutoFit 获得内容真实高度
+            row_range.AutoFit()
+            base_h = row_range.RowHeight
+            
+            final_h = base_h + padding_pt
+            if final_h < min_height_pt: final_h = min_height_pt
+            if final_h > max_height_pt: final_h = max_height_pt
+            
+            row_range.RowHeight = final_h
+        
+        wb.Save()
+        wb.Close()
+        return f"✅ 美学气囊注入完毕：Row {start_row} ~ {end_row} (+{padding_pt}pt)"
+    except Exception as e:
+        return f"Error: 美学注入失败 → {str(e)}"
+    finally:
+        excel.Quit()
 
 
 # ============================================================

@@ -31,3 +31,6 @@ scratch/
 # IDE
 .vscode/
 .idea/
+
+# Drive Caches
+.tmp.driveupload/

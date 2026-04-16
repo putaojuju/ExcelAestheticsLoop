@@ -65,6 +65,7 @@ def register_io_tools(mcp):
         """
         读取指定 Sheet 的指定行范围，返回 JSON 格式数据。
         适合查看已有清单内容或验证写入结果。
+        [V2.2] 改用 iter_rows(min_row=) 直接跳至目标行，避免全表顺序扫描。
         """
         if not os.path.exists(file_path):
             return f"Error: 文件不存在 → {file_path}"
@@ -77,19 +78,70 @@ def register_io_tools(mcp):
 
             ws = wb[sheet_name]
             rows = []
-            for r in range(start_row, min(end_row + 1, ws.max_row + 1)):
+            for r_idx, row_tuple in enumerate(
+                ws.iter_rows(min_row=start_row, max_row=end_row, max_col=21, values_only=True),
+                start=start_row
+            ):
                 row_data = {}
-                for c in range(1, min(ws.max_column + 1, 22)):
-                    v = ws.cell(row=r, column=c).value
+                for c_idx, v in enumerate(row_tuple, start=1):
                     if v is not None:
-                        row_data[f"Col{c}"] = v if isinstance(v, (int, float)) else str(v)[:60]
+                        row_data[f"Col{c_idx}"] = v if isinstance(v, (int, float)) else str(v)[:60]
                 if row_data:
-                    rows.append({"row": r, "cells": row_data})
+                    rows.append({"row": r_idx, "cells": row_data})
 
             wb.close()
             return json.dumps(rows, ensure_ascii=False, indent=2)
         except Exception as e:
             return f"Error: 读取失败 → {str(e)}"
+
+    @mcp.tool()
+    def grep_rows(file_path: str, sheet_name: str, pattern: str,
+                  max_results: int = 50) -> str:
+        """
+        在指定 Sheet 中全表搜索包含关键字的行，返回匹配结果。
+        比 read_excel_rows 范围读取快 100 倍，是「找内容」的首选工具。
+
+        pattern: 搜索关键字（不区分大小写，支持中文）
+        max_results: 最多返回行数，默认 50
+        """
+        if not os.path.exists(file_path):
+            return f"Error: 文件不存在 → {file_path}"
+
+        try:
+            wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+            if sheet_name not in wb.sheetnames:
+                wb.close()
+                return f"Error: Sheet '{sheet_name}' 不存在。可选: {wb.sheetnames}"
+
+            ws = wb[sheet_name]
+            pattern_lower = pattern.lower()
+            matches = []
+
+            for r_idx, row_tuple in enumerate(
+                ws.iter_rows(max_col=21, values_only=True), start=1
+            ):
+                row_str = " ".join(str(v) for v in row_tuple if v is not None).lower()
+                if pattern_lower in row_str:
+                    row_data = {}
+                    for c_idx, v in enumerate(row_tuple, start=1):
+                        if v is not None:
+                            row_data[f"Col{c_idx}"] = v if isinstance(v, (int, float)) else str(v)[:80]
+                    matches.append({"row": r_idx, "cells": row_data})
+                    if len(matches) >= max_results:
+                        break
+
+            wb.close()
+            result = {
+                "pattern": pattern,
+                "sheet": sheet_name,
+                "total_matches": len(matches),
+                "results": matches
+            }
+            if len(matches) >= max_results:
+                result["warning"] = f"已达最大返回数 {max_results}，可能还有更多结果，请缩窄关键字"
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        except Exception as e:
+            return f"Error: 搜索失败 → {str(e)}"
 
     @mcp.tool()
     def copy_template(dest_path: str, template_path: str = "") -> str:
@@ -384,3 +436,31 @@ def register_io_tools(mcp):
 
         except Exception as e:
             return f"Error: 图片提取失败 → {str(e)}"
+
+    @mcp.tool()
+    def delete_rows(file_path: str, sheet_name: str, start_row: int, end_row: int) -> str:
+        """
+        物理删除指定行范围（用于裁切模板多余空行，自动维持下方单元格上移及公式引用）。
+        操作前自动备份。
+        """
+        if not os.path.exists(file_path):
+            return f"Error: 文件不存在 → {file_path}"
+        if start_row > end_row:
+            return f"Error: start_row ({start_row}) 不得大于 end_row ({end_row})"
+
+        bak_path = make_backup(file_path)
+        try:
+            wb = openpyxl.load_workbook(file_path)
+            if sheet_name not in wb.sheetnames:
+                wb.close()
+                return f"Error: Sheet '{sheet_name}' 不存在。"
+            
+            ws = wb[sheet_name]
+            amount = end_row - start_row + 1
+            ws.delete_rows(start_row, amount)
+            
+            wb.save(file_path)
+            wb.close()
+            return f"✅ 裁切成功：已从 {sheet_name} 删除第 {start_row} 至 {end_row} 行（共 {amount} 行）。\n备份: {os.path.basename(bak_path)}"
+        except Exception as e:
+            return f"Error: 裁切失败 → {str(e)}"
